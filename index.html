@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Meray gher per ajaoo! - Rayyan's Party</title>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#d4f0ff;--ink:#23205a;--sun:#ffc933;--green:#27ae60;--panel:#fff;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1b1a45;--ink:#fff6d6;--panel:#2c2a68}}
+:root[data-theme="dark"]{--bg:#1b1a45;--ink:#fff6d6;--panel:#2c2a68}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:"Baloo 2","Trebuchet MS",system-ui,sans-serif;display:flex;justify-content:center;align-items:flex-start;overflow-x:hidden}
+main{width:100%;max-width:460px;padding:14px 16px;box-sizing:border-box;text-align:center}
+[hidden]{display:none!important}
+h1{font-size:clamp(2.2rem,10vw,3rem);font-weight:800;margin:8px 0 0;line-height:1.05;text-shadow:3px 3px 0 var(--sun)}
+.sub{font-size:1.2rem;margin:10px 0 14px}
+button{font:inherit;color:inherit;cursor:pointer;border:0}
+button:focus-visible{outline:4px solid var(--sun);outline-offset:3px}
+.big{font-size:1.6rem;font-weight:800;padding:10px 30px;border-radius:999px;background:var(--sun);color:#23205a;box-shadow:0 5px 0 #d99a00;margin:6px}
+.big.alt{background:var(--panel);color:var(--ink);box-shadow:0 5px 0 rgba(0,0,0,.25)}
+.hud{display:flex;justify-content:space-between;font-size:1.5rem;font-weight:800;padding:0 6px 6px}
+canvas{display:block;margin:0 auto;border-radius:24px;touch-action:none;box-shadow:0 6px 0 rgba(0,0,0,.2)}
+.tip{font-size:1rem;margin:8px 0 0;opacity:.85}
+.score{font-size:4.5rem;font-weight:800;line-height:1;margin:6px 0}
+</style>
+</head>
+<body>
+<main>
+  <section id="home">
+    <div id="face"></div>
+    <h1>Meray gher per ajaoo!</h1>
+    <p class="sub">Rayyan is having a party. Tap each friend to bring them to his house!</p>
+    <button class="big" id="go">Start</button>
+    <p class="tip">Ayaan and Marium are worth 3 friends each. Tap Rayyan to hear him call.</p>
+  </section>
+  <section id="play" hidden>
+    <div class="hud"><span id="fr">Friends: 0</span><span id="tm">40</span></div>
+    <canvas id="cv" aria-label="Rayyan's party game"></canvas>
+  </section>
+  <section id="end" hidden>
+    <h1 id="endT"></h1>
+    <div class="score" id="endS"></div>
+    <p class="sub" id="endM"></p>
+    <button class="big" id="again">Play again</button>
+  </section>
+</main>
+<script>
+const W=360,H=560,$=id=>document.getElementById(id);
+const RAY={shirt:'#27ae60',hair:'#4a2a17',skin:'#e0a878',h:'curl'};
+const GUESTS=[
+ {n:'Ayaan',shirt:'#2f80ed',hair:'#2b1b17',skin:'#f0bf94',h:'short',pts:3},
+ {n:'Marium',shirt:'#ff3d81',hair:'#2b1b17',skin:'#f0bf94',h:'pig',pts:3},
+ {shirt:'#1fb5a9',hair:'#3a2418',skin:'#e0a878',h:'bun',pts:1},
+ {shirt:'#ff9a3c',hair:'#2b1b17',skin:'#f0bf94',h:'short',pts:1},
+ {shirt:'#8a63ff',hair:'#1f1410',skin:'#c98f62',h:'curl',pts:1},
+ {shirt:'#f2c200',hair:'#8a5a2b',skin:'#f6d0a8',h:'short',pts:1}
+];
+$('face').innerHTML=`<svg viewBox="0 0 100 110" width="110" height="120" aria-hidden="true"><rect x="22" y="78" width="56" height="32" rx="14" fill="${RAY.shirt}"/><circle cx="50" cy="46" r="28" fill="${RAY.skin}"/>${[[24,32],[36,20],[50,16],[64,20],[76,32]].map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="12" fill="${RAY.hair}"/>`).join('')}<circle cx="40" cy="48" r="3.5" fill="#23205a"/><circle cx="60" cy="48" r="3.5" fill="#23205a"/><path d="M36 57 Q50 74 64 57Z" fill="#23205a"/><circle cx="33" cy="58" r="4" fill="#ff9aa2" opacity=".6"/><circle cx="67" cy="58" r="4" fill="#ff9aa2" opacity=".6"/></svg>`;
+
+const cv=$('cv'),c=cv.getContext('2d'),dpr=Math.min(window.devicePixelRatio||1,2);
+cv.width=W*dpr;cv.height=H*dpr;
+function fit(){const s=Math.min((Math.min(innerWidth,460)-32)/W,(innerHeight-110)/H,1.2);cv.style.width=W*s+'px';cv.style.height=H*s+'px'}
+addEventListener('resize',fit);
+function show(id){['home','play','end'].forEach(s=>$(s).hidden=s!==id)}
+
+function say(){
+  g.say=1;
+  try{
+    const s=window.speechSynthesis;s.cancel();
+    const ur=s.getVoices().find(v=>/^ur/i.test(v.lang));
+    const u=new SpeechSynthesisUtterance(ur?'میرے گھر پر آجاؤ':'मेरे घर पर आजाओ');
+    u.lang=ur?'ur-PK':'hi-IN';u.pitch=2;u.rate=.85;s.speak(u);
+  }catch(e){}
+}
+
+let g={on:false},best=0;
+try{best=+localStorage.getItem('ar-party-best')||0}catch(e){}
+$('go').onclick=start;$('again').onclick=start;
+
+function start(){
+  g={on:true,score:0,time:40,t:0,spawn:.3,guests:[],pops:[],cheer:0,say:0,last:performance.now()};
+  show('play');fit();hud();say();requestAnimationFrame(loop);
+}
+function hud(){$('fr').textContent='Friends: '+g.score;$('tm').textContent=Math.ceil(Math.max(0,g.time))}
+
+cv.addEventListener('pointerdown',e=>{
+  if(!g.on)return;
+  const r=cv.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*W,y=(e.clientY-r.top)/r.height*H;
+  if(x<150&&y>90&&y<260){say();return}
+  let best=null,bd=1e9;
+  g.guests.forEach(q=>{if(q.in)return;const dx=Math.abs(x-q.x),dy=Math.abs(y-(q.y+34*q.s));
+    if(dx<44&&dy<62){const d=dx+dy;if(d<bd){bd=d;best=q}}});
+  if(best){best.in=true;g.score+=best.p.pts;g.pops.push({x:best.x,y:best.y-30,t:0,s:'+'+best.p.pts,c:'#ffd633'});g.say=.7;hud()}
+});
+
+function loop(now){
+  if(!g.on)return;
+  const dt=Math.min((now-g.last)/1000,.05);g.last=now;g.t+=dt;g.time-=dt;
+  g.spawn-=dt;
+  if(g.spawn<=0&&g.guests.length<8){
+    g.spawn=Math.max(.5,1-g.t/90);
+    const dir=Math.random()<.5?1:-1,lane=[330,400,470][Math.floor(Math.random()*3)];
+    const r=Math.random(),p=r<.12?GUESTS[0]:r<.24?GUESTS[1]:GUESTS[2+Math.floor(Math.random()*4)];
+    g.guests.push({p,dir,x:dir>0?-30:W+30,y:lane,s:.9,v:55+Math.random()*55+g.t,ph:Math.random()*6,in:false});
+  }
+  g.guests=g.guests.filter(q=>{
+    q.ph+=dt;
+    if(q.in){
+      const dx=260-q.x,dy=196-q.y,d=Math.hypot(dx,dy),st=320*dt;
+      if(d<st+10){g.pops.push({x:260,y:190,t:0,s:'Welcome!',c:'#fff'});g.cheer=.6;return false}
+      q.x+=dx/d*st;q.y+=dy/d*st;q.s=.9*Math.min(1,Math.max(.4,d/240));
+      return true;
+    }
+    q.x+=q.dir*q.v*dt;
+    return q.dir>0?q.x<W+50:q.x>-50;
+  });
+  g.pops.forEach(p=>p.t+=dt);g.pops=g.pops.filter(p=>p.t<.9);
+  g.cheer=Math.max(0,g.cheer-dt);g.say=Math.max(0,g.say-dt);
+  hud();draw();
+  if(g.time<=0){finish();return}
+  requestAnimationFrame(loop);
+}
+function finish(){
+  g.on=false;
+  const nb=g.score>best;if(nb){best=g.score;try{localStorage.setItem('ar-party-best',best)}catch(e){}}
+  $('endT').textContent=g.score>=20?'What a party, Rayyan!':'Welcome home, friends!';
+  $('endS').textContent=g.score;
+  $('endM').textContent=(nb&&g.score>0?'New best! ':'')+'Best: '+best;
+  show('end');say();
+}
+
+function rr(x,y,w,h,r){c.beginPath();c.roundRect(x,y,w,h,r);c.fill()}
+function person(x,y,p,s,t,wave,moving){
+  c.save();c.translate(x,y);c.scale(s,s);
+  const sw=moving?Math.sin(t*9)*6:0;
+  c.strokeStyle=p.skin;c.lineWidth=7;c.lineCap='round';
+  c.beginPath();c.moveTo(-17,26);c.lineTo(-24,54);
+  if(wave){c.moveTo(17,26);c.lineTo(36,-4+Math.sin(t*10)*6)}else{c.moveTo(17,26);c.lineTo(24,54)}
+  c.stroke();
+  c.fillStyle='#23205a';rr(-13+sw,56,10,22,4);rr(3-sw,56,10,22,4);
+  c.fillStyle=p.shirt;rr(-19,18,38,42,12);
+  c.fillStyle=p.skin;c.beginPath();c.arc(0,0,21,0,7);c.fill();
+  c.fillStyle=p.hair;
+  if(p.h==='curl'){[[-16,-12],[-8,-20],[0,-22],[8,-20],[16,-12]].forEach(a=>{c.beginPath();c.arc(a[0],a[1],9,0,7);c.fill()})}
+  else{c.beginPath();c.moveTo(-21,-2);c.quadraticCurveTo(-21,-26,0,-24);c.quadraticCurveTo(21,-26,21,-2);c.quadraticCurveTo(10,-14,0,-14);c.quadraticCurveTo(-10,-14,-21,-2);c.fill();
+    if(p.h==='bun'){c.beginPath();c.arc(0,-28,9,0,7);c.fill()}
+    if(p.h==='pig'){c.beginPath();c.arc(-23,4,8,0,7);c.arc(23,4,8,0,7);c.fill()}}
+  c.fillStyle='#23205a';c.beginPath();c.arc(-7,1,2.6,0,7);c.arc(7,1,2.6,0,7);c.fill();
+  c.strokeStyle='#23205a';c.lineWidth=2.6;c.beginPath();c.arc(0,6,8,.2,Math.PI-.2);c.stroke();
+  c.restore();
+}
+function bubble(x,y,k){
+  c.save();c.translate(x,y);c.scale(k,k);
+  c.fillStyle='#fff';c.strokeStyle='#23205a';c.lineWidth=3;
+  c.beginPath();c.roundRect(-140,-26,280,52,26);c.fill();c.stroke();
+  c.beginPath();c.moveTo(-60,25);c.lineTo(-76,52);c.lineTo(-34,25);c.fill();
+  c.beginPath();c.moveTo(-60,25);c.lineTo(-76,52);c.lineTo(-34,25);c.stroke();
+  c.strokeStyle='#fff';c.lineWidth=5;c.beginPath();c.moveTo(-58,25);c.lineTo(-37,25);c.stroke();
+  c.fillStyle='#23205a';c.font='800 24px "Baloo 2",sans-serif';c.textAlign='center';c.textBaseline='middle';
+  c.fillText('Meray gher per ajaoo!',0,2);
+  c.restore();
+}
+function draw(){
+  c.setTransform(dpr,0,0,dpr,0,0);
+  const sky=c.createLinearGradient(0,0,0,260);sky.addColorStop(0,'#7fd2ff');sky.addColorStop(1,'#e3f7ff');
+  c.fillStyle=sky;c.fillRect(0,0,W,H);
+  c.fillStyle='#ffd84d';c.beginPath();c.arc(W-44,36,24,0,7);c.fill();
+  c.fillStyle='#8fe3a5';c.fillRect(0,240,W,50);
+  c.fillStyle='#6b6a8f';c.fillRect(0,285,W,H-285);
+  c.strokeStyle='#fff';c.lineWidth=3;c.setLineDash([16,14]);
+  [395,465].forEach(y=>{c.beginPath();c.moveTo(0,y);c.lineTo(W,y);c.stroke()});c.setLineDash([]);
+  // house
+  c.fillStyle='#ffe3a3';c.fillRect(190,150,140,106);
+  c.fillStyle='#e8574a';c.beginPath();c.moveTo(178,152);c.lineTo(260,96);c.lineTo(342,152);c.closePath();c.fill();
+  c.fillStyle='#9a5b2e';rr(240,200,40,56,8);
+  c.fillStyle='#ffd633';c.beginPath();c.arc(272,230,3,0,7);c.fill();
+  c.fillStyle='#9fdcff';rr(200,168,28,26,5);rr(292,168,28,26,5);
+  // Rayyan
+  const jump=g.cheer>0?-Math.abs(Math.sin(g.cheer*14))*12:0;
+  person(80,168+jump,RAY,1,g.t,true,false);
+  bubble(180,52,g.say>0?1+Math.sin(g.say*20)*.04:1);
+  // guests
+  g.guests.slice().sort((a,b)=>a.y-b.y).forEach(q=>person(q.x,q.y,q.p,q.s,q.ph,false,!q.in||true));
+  g.guests.forEach(q=>{if(q.p.n&&!q.in){c.fillStyle='#fff';c.strokeStyle='#23205a';c.lineWidth=3;c.font='800 16px "Baloo 2",sans-serif';c.textAlign='center';c.strokeText(q.p.n,q.x,q.y-34*q.s);c.fillText(q.p.n,q.x,q.y-34*q.s)}});
+  g.pops.forEach(p=>{c.globalAlpha=1-p.t/.9;c.fillStyle=p.c;c.strokeStyle='#23205a';c.lineWidth=4;c.font='800 26px "Baloo 2",sans-serif';c.textAlign='center';c.strokeText(p.s,p.x,p.y-p.t*50);c.fillText(p.s,p.x,p.y-p.t*50);c.globalAlpha=1});
+}
+</script>
+</body>
+</html>
